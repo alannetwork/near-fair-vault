@@ -70,6 +70,25 @@ impl Contract {
         return rand < self.win_probability;
     }
 
+
+    pub fn withdraw_owner(&self){
+        self.is_the_owner();
+        let contract_balance = env::account_balance()-env::account_locked_balance();
+        let amount_to_withdraw = contract_balance/2;
+        Promise::new(env::predecessor_account_id()).transfer(amount_to_withdraw as u128);
+    }
+    
+    //validate if the owner is the caller
+    #[private]
+    pub fn is_the_owner(&self)   {
+        //validate that only the owner contract add new contract address
+        assert_eq!(
+            self.owner_id==env::predecessor_account_id(),
+            true,
+            "You are not the contract owner."
+        );
+    }    
+
     /*
     pub fn get_payment_multiplier(&self) -> f64{
         1.94 as f64;
