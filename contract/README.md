@@ -65,6 +65,9 @@ cat ./neardev/dev-account
 `View` methods can be called for **free** by anyone, even people **without a NEAR account**!
 
 ```bash
+
+near call token.meta.pool.testnet ft_transfer_call '{"receiver_id": "dev-1669163515092-64475245128358", "amount": "10000000000000000000000000", "msg": "{\"action_to_execute\": \"toss-coin\",\"coin_side_choosen\": true}"}' --accountId alan_test.testnet --depositYocto 1 --gas 200000000000000 
+
 # Use near-cli to get the greeting
 near view <dev-account> get_greeting
 ```
