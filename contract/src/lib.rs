@@ -115,34 +115,35 @@ impl Contract {
         //Pick which action to execute when resolving transfer;
         match msg_json.action_to_execute.as_str() {
             "increase_deposit" => {
+                //Verify that you are sending from whitelisted token contract
+
+
                 //Verify that is possible to make a deposit
                 //this happens when the actual date is minor to locked_until date
                 //or the locked_until date hass arrived and the winner hasn't withdraw the prize
 
-                assert!(env::block_timestamp()+self.countdown_period>=self.time_last_deposit,"The vault has timed out. Claim prize");
+                assert!(self.time_last_deposit+self.countdown_period>=env::block_timestamp(),"The vault has timed out. Claim prize");
+                
                 //Verify that the deposit is on an amount of the indicated
                 //In case, it reset the pending period to the case choosen
-                match amount {
-                    U128::from("1000000000000000000000000") => { // 1 stNEAR - month days
-                        self.countdown_period = 
+                match amount.0 {
+                    1000000000000000000000000 => { // 1 stNEAR - 1 month
+                        self.countdown_period = 2629743;
                     },
-                    U128::from("10000000000000000000000000") => { // 10 stNEAR - 2 weeks
-                        self.countdown_period = 
+                    10000000000000000000000000 => { // 10 stNEAR - 2 weeks
+                        self.countdown_period = 604800*2
                     },
-                    U128::from("30000000000000000000000000") => { // 30 stNEAR - 3 days
-                        self.countdown_period = 
+                    30000000000000000000000000 => { // 30 stNEAR - 3 days
+                        self.countdown_period = 86400*3;
                     },
-                    U128::from("50000000000000000000000000") => { // 50 stNEAR - 1 day
-                        self.countdown_period = 
+                    50000000000000000000000000 => { // 50 stNEAR - 1 day
+                        self.countdown_period = 86400;
                     },
-                    U128::from("100000000000000000000000000") => { // 100 stNEAR - 1 hour
-                        self.countdown_period = 
+                    100000000000000000000000000 => { // 100 stNEAR - 1 hour
+                        self.countdown_period = 3600;
                     },
-                    U128::from("100000000000000000000000000") => { // 100 stNEAR
-                        self.countdown_period = 
-                    },
-                    U128::from("1000000000000000000000000000") => { // 1000 stNEAR - 15 mins
-                        self.countdown_period = 
+                    1000000000000000000000000000 => { // 1000 stNEAR - 15 mins
+                        self.countdown_period = 900;
                     },
                     _ => assert!(true,"Amount not accepted."),
 
@@ -150,7 +151,7 @@ impl Contract {
 
                 
                 //Update available deposit
-                self.ft_token_balance = self.ft_token_balance.wrap() + deposit.wrap();
+                self.ft_token_balance += deposit;
             
                 //Update date tracker
                 //Save current time
@@ -158,7 +159,7 @@ impl Contract {
                 
 
                 //update field of who is depositing tokens in the contract
-
+                self.accountid_last_deposit = env::signer_account_id();
                 //Log to show the history of people depositing and implement The Graph
 
                 PromiseOrValue::Value(U128::from(0))
