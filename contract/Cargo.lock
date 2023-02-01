@@ -9,6 +9,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 
 [[package]]
+name = "NEAR-diamond-vault"
+version = "1.0.0"
+dependencies = [
+ "near-sdk",
+ "uint",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1304,14 +1312,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d82e1a7758622a465f8cee077614c73484dac5b836c02ff6a40d5d1010324d7"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "toss-coin"
-version = "1.0.0"
-dependencies = [
- "near-sdk",
- "uint",
 ]
 
 [[package]]

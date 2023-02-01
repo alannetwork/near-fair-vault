@@ -13,7 +13,7 @@ echo ">> Deploying contract"
 echo ">> Initi contract?"
 select yn in "Yes" "No"; do
     case $yn in
-        Si ) near dev-deploy --wasmFile ./target/wasm32-unknown-unknown/release/toss_coin.wasm --initFunction new --initArgs '{"owner_id":"alan_test.testnet"}'; break;;
+        Yes ) near dev-deploy --wasmFile ./target/wasm32-unknown-unknown/release/toss_coin.wasm --initFunction new --initArgs '{"accountid_last_deposit":"alan_test.testnet","ft_token_id":"bb-strw.testnet","owner_id":"alan_test.testnetS"}'; break;;
         No ) near dev-deploy --wasmFile ./target/wasm32-unknown-unknown/release/toss_coin.wasm;break;;
     esac
 done

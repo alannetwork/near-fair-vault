@@ -26,7 +26,7 @@ pub struct Contract {
     time_last_deposit: Timestamp,
     countdown_period: Timestamp,
     accountid_last_deposit: AccountId,
-    ft_token_balance: U128,
+    ft_token_balance: Balance,
     ft_token_id: AccountId,
     owner_id: AccountId
 }
@@ -42,7 +42,6 @@ trait ValueReturnTrait {
 pub struct MsgInput {
      
     pub action_to_execute: String,
-    pub coin_side_choosen: bool,
    
 }
 
@@ -60,31 +59,33 @@ impl Contract {
         assert!(!env::state_exists(), "Already initialized");
         let this = Self {
             time_last_deposit: env::block_timestamp(),
-            countdown_period: 0, // X amount of time //COUNTDOWN PERIOD
+            countdown_period: 2629743, // X amount of time //COUNTDOWN PERIOD
             accountid_last_deposit,
-            ft_token_balance: U128::from(0),
+            ft_token_balance: 0,
             ft_token_id,
             owner_id
         };
         this
     }
  
-    pub fn get_time_left()->u64{
-        env::block_timestamp()
+    pub fn get_time_left(&self)->u64{
+        self.time_last_deposit+self.countdown_period-env::block_timestamp()
     }
 
     //method to transfer the ft tokens to the winner
     //ideally any one can pull the crank to send the tokens to the winner
-    pub fn withdraw_winner(&self){
+    pub fn withdraw_winner(&mut self){
+
+        assert!(self.time_last_deposit+self.countdown_period>=env::block_timestamp(),"The vault hasn't timed out.");
 
         //transfer FT tokens to winner
-        ft_contract::ext(self.ft_token_id)
+        ft_contract::ext(self.ft_token_id.clone())
             .with_attached_deposit(1)
             .with_static_gas(Gas(5*TGAS))
-            .ft_transfer(self.accountid_last_deposit, self.ft_token_balance, None);
+            .ft_transfer(self.accountid_last_deposit.clone(), U128::from(self.ft_token_balance.clone()), None);
         
         //update ft balance to zero (0)
-        self.ft_token_balance = U128::from(0);
+        self.ft_token_balance = 0;
     }
     //validate if the owner is the caller
     #[private]
@@ -104,29 +105,29 @@ impl Contract {
     pub fn ft_on_transfer(
         &mut self,
         sender_id: AccountId,
-        amount: U128,
+        amount: Balance,
         msg: String,
     ) -> PromiseOrValue<U128> {
         // 
         let msg_json: MsgInput = from_str(&msg).unwrap();
-        let deposit= amount;
-        let deposit_case;
-        let new_countdown_period;
+        let deposit = amount;
         //Pick which action to execute when resolving transfer;
         match msg_json.action_to_execute.as_str() {
             "increase_deposit" => {
                 //Verify that you are sending from whitelisted token contract
+                assert_ne!(self.ft_token_id,env::predecessor_account_id(),"This token is not accepted.");
 
 
                 //Verify that is possible to make a deposit
                 //this happens when the actual date is minor to locked_until date
                 //or the locked_until date hass arrived and the winner hasn't withdraw the prize
 
-                assert!(self.time_last_deposit+self.countdown_period>=env::block_timestamp(),"The vault has timed out. Claim prize");
+                assert!(self.time_last_deposit+self.countdown_period<=env::block_timestamp(),"The vault has timed out. Claim prize");
                 
                 //Verify that the deposit is on an amount of the indicated
                 //In case, it reset the pending period to the case choosen
-                match amount.0 {
+                //Put a rank between the tokens
+                match amount {
                     1000000000000000000000000 => { // 1 stNEAR - 1 month
                         self.countdown_period = 2629743;
                     },
@@ -151,7 +152,7 @@ impl Contract {
 
                 
                 //Update available deposit
-                self.ft_token_balance += deposit;
+                self.ft_token_balance = self.ft_token_balance+deposit;
             
                 //Update date tracker
                 //Save current time

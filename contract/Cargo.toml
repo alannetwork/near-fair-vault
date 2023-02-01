@@ -1,7 +1,7 @@
 [package]
-name = "toss-coin"
+name = "NEAR-diamond-vault"
 version = "1.0.0"
-authors = ["Near Inc <hello@near.org>"]
+authors = ["Alan777 <alanestrada@cloudmex.io>"]
 edition = "2021"
 
 [lib]
