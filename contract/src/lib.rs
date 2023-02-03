@@ -59,7 +59,9 @@ impl Contract {
         assert!(!env::state_exists(), "Already initialized");
         let this = Self {
             time_last_deposit: env::block_timestamp(),
-            countdown_period: 2629743, // X amount of time //COUNTDOWN PERIOD
+            //COUNTDOWN PERIOD
+            //start in 1 month
+            countdown_period: 2629743, // X amount of time 
             accountid_last_deposit,
             ft_token_balance: 0,
             ft_token_id,
@@ -70,6 +72,20 @@ impl Contract {
  
     pub fn get_time_left(&self)->u64{
         self.time_last_deposit+self.countdown_period-env::block_timestamp()
+    }
+
+    pub fn get_current_timestamp(&self)->u64{
+        env::block_timestamp()
+    }
+    //Last time somebody deposited
+    // By default is the time in which the contract initialized
+    pub fn get_time_last_deposit(&self)->u64{
+        self.time_last_deposit
+    }
+
+    //Time left to support the vault
+    pub fn get_countdown_period(&self)->u64{
+        self.countdown_period
     }
 
     //method to transfer the ft tokens to the winner
@@ -98,8 +114,8 @@ impl Contract {
         );
     }    
 
-    pub fn get_vault_balance(&self) {
-        self.ft_token_balance;
+    pub fn get_vault_balance(&self)->Balance {
+        return self.ft_token_balance;
     }
     // Method to process bets of Fungible Tokens
     pub fn ft_on_transfer(
