@@ -92,3 +92,6 @@ near login
 ```
 
 and then use the logged account to sign the transaction: `--accountId <your-account>`.
+
+
+near call bb-strw.testnet storage_deposit '{"account_id": "dev-1675454533387-82244519978819"}' --accountId alan_test.testnet --amount 0.01

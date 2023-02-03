@@ -28,6 +28,7 @@ pub struct Contract {
     accountid_last_deposit: AccountId,
     ft_token_balance: Balance,
     ft_token_id: AccountId,
+    treasury_id: AccountId,
     owner_id: AccountId
 }
 
@@ -55,7 +56,7 @@ impl Contract {
         that's passed in
     */
     #[init]
-    pub fn new(accountid_last_deposit:AccountId,ft_token_id:AccountId,owner_id: AccountId) -> Self {
+    pub fn new(accountid_last_deposit:AccountId,ft_token_id:AccountId,owner_id: AccountId,treasury_id: AccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let this = Self {
             time_last_deposit: env::block_timestamp(),
@@ -65,6 +66,7 @@ impl Contract {
             accountid_last_deposit,
             ft_token_balance: 0,
             ft_token_id,
+            treasury_id,
             owner_id
         };
         this
@@ -86,6 +88,10 @@ impl Contract {
     //Time left to support the vault
     pub fn get_countdown_period(&self)->u64{
         self.countdown_period
+    }     
+    //Get the balance of ft tokens deposited in the vault
+    pub fn get_vault_balance(&self)->Balance {
+        return self.ft_token_balance;
     }
 
     //method to transfer the ft tokens to the winner
@@ -112,18 +118,15 @@ impl Contract {
             true,
             "You are not the contract owner."
         );
-    }    
-
-    pub fn get_vault_balance(&self)->Balance {
-        return self.ft_token_balance;
-    }
+    }   
     // Method to process bets of Fungible Tokens
     pub fn ft_on_transfer(
         &mut self,
         sender_id: AccountId,
-        amount: Balance,
+        amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
+        
         // 
         let msg_json: MsgInput = from_str(&msg).unwrap();
         let deposit = amount;
@@ -165,11 +168,21 @@ impl Contract {
                     _ => assert!(true,"Amount not accepted."),
 
                 }
-
+                //Split revenue has to be done for fee
+                /*let deposit_without_fees = self.ft_token_balance * 0.97;
+                let covered_fees = self.ft_token_balance * 0.03;
                 
+            
+                //send fee FT tokens to treasury
+                ft_contract::ext(self.ft_token_id.clone())
+                .with_attached_deposit(1)
+                .with_static_gas(Gas(5*TGAS))
+                .ft_transfer(self.treasury_id.clone(), U128::from(covered_fees.clone()), None);
+    */
+
+    
                 //Update available deposit
                 self.ft_token_balance = self.ft_token_balance+deposit;
-            
                 //Update date tracker
                 //Save current time
                 self.time_last_deposit = env::block_timestamp();
@@ -183,14 +196,9 @@ impl Contract {
             }
             _ => PromiseOrValue::Value(U128::from(amount)),
         }
+    
     }
 
-
-    /*
-    pub fn get_payment_multiplier(&self) -> f64{
-        1.94 as f64;
-    }
-    */
 }
 /*
 #[near_bindgen]
