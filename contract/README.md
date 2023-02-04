@@ -94,4 +94,6 @@ near login
 and then use the logged account to sign the transaction: `--accountId <your-account>`.
 
 
-near call bb-strw.testnet storage_deposit '{"account_id": "dev-1675454533387-82244519978819"}' --accountId alan_test.testnet --amount 0.01
+near call token.meta.pool.testnet storage_deposit '{"account_id": "dev-1675463916416-75002785431912"}' --accountId alan_test.testnet --amount 0.01
+
+near call token.meta.pool.testnet ft_transfer_call '{"receiver_id": "dev-1675463916416-75002785431912", "amount": "10000000000000000000000000", "msg": "{\"action_to_execute\": \"increase_deposit\"}"}' --accountId alan_test.testnet --depositYocto 1 --gas 200000000000000

@@ -146,7 +146,7 @@ impl Contract {
                 //Verify that the deposit is on an amount of the indicated
                 //In case, it reset the pending period to the case choosen
                 //Put a rank between the tokens
-                match amount {
+                match amount.0 {
                     1000000000000000000000000 => { // 1 stNEAR - 1 month
                         self.countdown_period = 2629743;
                     },
@@ -182,7 +182,7 @@ impl Contract {
 
     
                 //Update available deposit
-                self.ft_token_balance = self.ft_token_balance+deposit;
+                self.ft_token_balance = self.ft_token_balance+u128::from(deposit);
                 //Update date tracker
                 //Save current time
                 self.time_last_deposit = env::block_timestamp();
