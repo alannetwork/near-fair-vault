@@ -62,7 +62,7 @@ impl Contract {
             time_last_deposit: env::block_timestamp(),
             //COUNTDOWN PERIOD
             //start in 1 month
-            countdown_period: 2629743, // X amount of time 
+            countdown_period: 2629743000000000, // X amount of time 
             accountid_last_deposit,
             ft_token_balance: 0,
             ft_token_id,
@@ -72,8 +72,8 @@ impl Contract {
         this
     }
  
-    pub fn get_time_left(&self)->u64{
-        self.time_last_deposit+self.countdown_period-env::block_timestamp()
+    pub fn get_end_date(&self)->u64{
+        self.time_last_deposit+self.countdown_period
     }
 
     pub fn get_current_timestamp(&self)->u64{
@@ -93,6 +93,16 @@ impl Contract {
     pub fn get_vault_balance(&self)->Balance {
         return self.ft_token_balance;
     }
+
+    pub fn get_ft_token_id(&self)->AccountId{
+        return self.ft_token_id.clone();
+    }
+
+
+    pub fn get_treasury_id(&self)->AccountId{
+        return self.treasury_id.clone();
+    }
+
 
     //method to transfer the ft tokens to the winner
     //ideally any one can pull the crank to send the tokens to the winner
@@ -133,8 +143,10 @@ impl Contract {
         //Pick which action to execute when resolving transfer;
         match msg_json.action_to_execute.as_str() {
             "increase_deposit" => {
+
+                env::log_str("Processing deposit of tokens"); 
                 //Verify that you are sending from whitelisted token contract
-                assert_ne!(self.ft_token_id,env::predecessor_account_id(),"This token is not accepted.");
+                assert_eq!(self.ft_token_id,env::predecessor_account_id(),"This token is not accepted.");
 
 
                 //Verify that is possible to make a deposit
@@ -146,28 +158,22 @@ impl Contract {
                 //Verify that the deposit is on an amount of the indicated
                 //In case, it reset the pending period to the case choosen
                 //Put a rank between the tokens
-                match amount.0 {
-                    1000000000000000000000000 => { // 1 stNEAR - 1 month
-                        self.countdown_period = 2629743;
-                    },
-                    10000000000000000000000000 => { // 10 stNEAR - 2 weeks
-                        self.countdown_period = 604800*2
-                    },
-                    30000000000000000000000000 => { // 30 stNEAR - 3 days
-                        self.countdown_period = 86400*3;
-                    },
-                    50000000000000000000000000 => { // 50 stNEAR - 1 day
-                        self.countdown_period = 86400;
-                    },
-                    100000000000000000000000000 => { // 100 stNEAR - 1 hour
-                        self.countdown_period = 3600;
-                    },
-                    1000000000000000000000000000 => { // 1000 stNEAR - 15 mins
-                        self.countdown_period = 900;
-                    },
-                    _ => assert!(true,"Amount not accepted."),
-
-                }
+                //Is required to turn this numbers into nanoseconds
+                    if amount.0 <= 1000000000000000000000000 { // 1 stNEAR or less - 1 month
+                        self.countdown_period = 2629743000000000;
+                    }else if amount.0 <=10000000000000000000000000 { // 10 stNEAR or less - 2 weeks
+                        self.countdown_period = 604800000000000*2
+                    }else if amount.0 <=30000000000000000000000000 { // 30 stNEAR or less - 3 days
+                        self.countdown_period = 86400000000000*3;
+                    }else if amount.0 <=50000000000000000000000000 { // 50 stNEAR or less - 1 day
+                        self.countdown_period = 86400000000000;
+                    }else if amount.0 <1000000000000000000000000000 { // less than 1000 stNEAR - 1 hour
+                        self.countdown_period = 3600000000000;
+                    }else{ // 1000 stNEAR or more - 15 mins
+                        self.countdown_period = 900000000000;
+                    }
+                log!("The new countdown period is: {}",self.countdown_period); 
+    
                 //Split revenue has to be done for fee
                 /*let deposit_without_fees = self.ft_token_balance * 0.97;
                 let covered_fees = self.ft_token_balance * 0.03;
@@ -183,13 +189,18 @@ impl Contract {
     
                 //Update available deposit
                 self.ft_token_balance = self.ft_token_balance+u128::from(deposit);
+
+                log!("The new token balance is: {}",self.ft_token_balance); 
                 //Update date tracker
                 //Save current time
                 self.time_last_deposit = env::block_timestamp();
+                log!("Time last deposit: {}",self.time_last_deposit); 
                 
 
                 //update field of who is depositing tokens in the contract
                 self.accountid_last_deposit = env::signer_account_id();
+
+                log!("Account last deposit: {}",self.accountid_last_deposit); 
                 //Log to show the history of people depositing and implement The Graph
 
                 PromiseOrValue::Value(U128::from(0))
