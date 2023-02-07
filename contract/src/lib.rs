@@ -32,7 +32,7 @@ pub struct Contract {
     treasury_id: AccountId,
     owner_id: AccountId,
     highest_deposit: Balance, //Highest amount somebody had deposit in the contract
-    highest_whitdraw: Balance, //Max 
+    highest_whitdraw: Balance, //Highest withdraw somebode had done when winning.
     deposit_history: Vec<AccountId, Balance>
 }
 
