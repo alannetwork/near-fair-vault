@@ -33,7 +33,7 @@ pub struct Contract {
     owner_id: AccountId,
     highest_deposit: Balance, //Highest amount somebody had deposit in the contract
     highest_whitdraw: Balance, //Highest withdraw somebode had done when winning.
-    deposit_history: Vec<AccountId, Balance>
+    //deposit_history: Vec<AccountId, Balance>
 }
 
 // Have to repeat the same trait for our own implementation.
@@ -70,7 +70,9 @@ impl Contract {
             ft_token_balance: 0,
             ft_token_id,
             treasury_id,
-            owner_id
+            owner_id,
+            highest_deposit:0,
+            highest_whitdraw:0
         };
         this
     }
@@ -156,7 +158,7 @@ impl Contract {
                 //this happens when the actual date is minor to locked_until date
                 //or the locked_until date hass arrived and the winner hasn't withdraw the prize
 
-                assert!(self.time_last_deposit+self.countdown_period<=env::block_timestamp(),"The vault has timed out. Claim prize");
+                assert!(self.time_last_deposit+self.countdown_period>env::block_timestamp(),"The vault has timed out. Claim prize");
                 
                 //Verify that the deposit is on an amount of the indicated
                 //In case, it reset the pending period to the case choosen
