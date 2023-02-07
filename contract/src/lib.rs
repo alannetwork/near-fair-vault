@@ -3,6 +3,7 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::{from_str};
 use near_sdk::json_types::U128;
+use near_sdk::store::vec;
 use near_sdk::{log,Timestamp, near_bindgen,env, Promise,Gas, require, AccountId, PanicOnDefault, PromiseOrValue, Balance};
 
 // Define modules
@@ -29,7 +30,10 @@ pub struct Contract {
     ft_token_balance: Balance,
     ft_token_id: AccountId,
     treasury_id: AccountId,
-    owner_id: AccountId
+    owner_id: AccountId,
+    highest_deposit: Balance, //Highest amount somebody had deposit in the contract
+    highest_whitdraw: Balance, //Max 
+    deposit_history: Vec<AccountId, Balance>
 }
 
 // Have to repeat the same trait for our own implementation.
@@ -45,7 +49,6 @@ pub struct MsgInput {
     pub action_to_execute: String,
    
 }
-
 
 // Implement the contract structure
 #[near_bindgen]
