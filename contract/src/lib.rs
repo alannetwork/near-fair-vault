@@ -31,6 +31,7 @@ pub struct Contract {
     ft_token_id: AccountId,
     treasury_id: AccountId,
     owner_id: AccountId,
+    thirdparty_id:AccountId, //meta yield account
     highest_deposit: Balance, //Highest amount somebody had deposit in the contract
     highest_whitdraw: Balance, //Highest withdraw somebode had done when winning.
     //deposit_history: Vec<AccountId, Balance>
@@ -59,7 +60,7 @@ impl Contract {
         that's passed in
     */
     #[init]
-    pub fn new(accountid_last_deposit:AccountId,ft_token_id:AccountId,owner_id: AccountId,treasury_id: AccountId) -> Self {
+    pub fn new(accountid_last_deposit:AccountId,ft_token_id:AccountId,owner_id: AccountId,treasury_id: AccountId,thirdparty_id: AccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let this = Self {
             time_last_deposit: env::block_timestamp(),
@@ -70,6 +71,7 @@ impl Contract {
             ft_token_balance: 0,
             ft_token_id,
             treasury_id,
+            thirdparty_id,
             owner_id,
             highest_deposit:0,
             highest_whitdraw:0
@@ -102,7 +104,9 @@ impl Contract {
     pub fn get_ft_token_id(&self)->AccountId{
         return self.ft_token_id.clone();
     }
-
+    pub fn get_highest_deposit(&self)->Balance {
+        return self.highest_deposit;
+    }
 
     pub fn get_treasury_id(&self)->AccountId{
         return self.treasury_id.clone();
@@ -113,14 +117,23 @@ impl Contract {
     //ideally any one can pull the crank to send the tokens to the winner
     pub fn withdraw_winner(&mut self){
 
-        assert!(self.time_last_deposit+self.countdown_period>=env::block_timestamp(),"The vault hasn't timed out.");
+        assert!(self.time_last_deposit+self.countdown_period<env::block_timestamp(),"The vault hasn't timed out.");
 
+        let amount_to_winner = self.ft_token_balance * 49 /100;
+        log!("Deposit to vault: {}",amount_to_winner); 
+        
+        let amount_to_thirdparty = self.ft_token_balance * 51/100;
         //transfer FT tokens to winner
         ft_contract::ext(self.ft_token_id.clone())
             .with_attached_deposit(1)
             .with_static_gas(Gas(5*TGAS))
             .ft_transfer(self.accountid_last_deposit.clone(), U128::from(self.ft_token_balance.clone()), None);
         
+        //Verifity if it is the highest withdraw
+
+        if self.highest_whitdraw < self.ft_token_balance {
+            self.highest_whitdraw = self.ft_token_balance
+        }
         //update ft balance to zero (0)
         self.ft_token_balance = 0;
     }
@@ -178,29 +191,39 @@ impl Contract {
                         self.countdown_period = 900000000000;
                     }
                 log!("The new countdown period is: {}",self.countdown_period); 
-    
-                //Split revenue has to be done for fee
-                /*let deposit_without_fees = self.ft_token_balance * 0.97;
-                let covered_fees = self.ft_token_balance * 0.03;
-                
+                    
+     
             
                 //send fee FT tokens to treasury
+                let covered_fees = amount.0 * 3/100;
+
                 ft_contract::ext(self.ft_token_id.clone())
                 .with_attached_deposit(1)
                 .with_static_gas(Gas(5*TGAS))
                 .ft_transfer(self.treasury_id.clone(), U128::from(covered_fees.clone()), None);
-    */
+
+                log!("Deposit to fees: {}",covered_fees); 
+
+
+                //Split revenue has to be done for fee
+                let deposit_without_fees = amount.0 * 97 /100;
+                log!("Deposit to vault: {}",deposit_without_fees);     
 
     
                 //Update available deposit
-                self.ft_token_balance = self.ft_token_balance+u128::from(deposit);
-
-                log!("The new token balance is: {}",self.ft_token_balance); 
+                self.ft_token_balance = self.ft_token_balance+u128::from(deposit_without_fees);
+                log!("The new vault balance is: {}",self.ft_token_balance); 
                 //Update date tracker
                 //Save current time
                 self.time_last_deposit = env::block_timestamp();
                 log!("Time last deposit: {}",self.time_last_deposit); 
                 
+                //calculte if this is the higgest deposit
+                //If so, update the value
+                if self.highest_deposit < amount.0 {
+                    self.highest_deposit = amount.0;
+                    log!("There is a new highest deposit: {}",self.highest_deposit); 
+                }
 
                 //update field of who is depositing tokens in the contract
                 self.accountid_last_deposit = env::signer_account_id();
@@ -216,38 +239,6 @@ impl Contract {
     }
 
 }
-/*
-#[near_bindgen]
-impl ValueReturnTrait for Contract {
-    fn ft_toss_coin(&self,bet: U128, coin_side_choosen:bool) -> PromiseOrValue<U128> {
-        assert!(bet>=U128::from(self.minimum_bet),"Minimum bet is not achieved.");
-        let mut amount_to_pay:u128= (u128::from(bet) as f64*1.94) as u128;
-
-        log!("Amount to pay, in case of win = {}", amount_to_pay);
-
-        // Measure how much tokens does the contract have.
-        // assert!(amount_to_pay<contract_balance,"Contract doesn't have enough balance to pay this bet, try with a lower bet");
-
-        // Request result from seed
-        // An oracle can improve this
-        env::log_str("Coin is flipping");  
-        let toss_result = self.get_coin_side();
-        let mut amount:u128 = "0".parse().expect("Not an integer");
-        if coin_side_choosen == toss_result {
-            log!("¡You win! Paying bet {}", amount_to_pay);
-            //amount = amount_to_pay;
-            PromiseOrValue::Value(U128::from(0))
-        }else{
-            //amount = amount_to_pay;
-            amount_to_pay = "0".parse().expect("Not an integer");
-            log!("¡You Lost! {} tokens removed from your account", u128::from(bet));
-            log!("Amount to pay {}", amount_to_pay);
-            PromiseOrValue::Value(U128::from(0))
-
-        }
-    }
-}
-*/
 
 
 /*
