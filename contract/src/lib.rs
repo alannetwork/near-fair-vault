@@ -25,7 +25,7 @@ const NANOSECONDS: u64 = 1_000_000_000;
 pub struct DepositInfo {
     pub account_id: AccountId,
     pub date: Timestamp,
-    pub ft_amount: Balance,
+    pub ft_amount: String,
 }
 // Define the contract structure
 #[near_bindgen]
@@ -249,7 +249,7 @@ impl Contract {
                 self.deposit_history.insert(&DepositInfo{
                     account_id:self.accountid_last_deposit.clone(),
                     date:self.time_last_deposit,
-                    ft_amount:amount.0
+                    ft_amount:amount.0.to_string()
                 });
 
                 PromiseOrValue::Value(U128::from(0))
