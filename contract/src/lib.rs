@@ -3,7 +3,7 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::{from_str};
 use near_sdk::json_types::U128;
-use near_sdk::store::vec;
+use near_sdk::collections::{UnorderedMap, Vector, LookupMap, UnorderedSet};
 use near_sdk::{log,Timestamp, near_bindgen,env, Promise,Gas, require, AccountId, PanicOnDefault, PromiseOrValue, Balance};
 
 // Define modules
@@ -19,7 +19,14 @@ const GAS_FOR_FT_ON_TRANSFER: Gas = Gas(BASE_GAS + PROMISE_CALL);
 // nanoseconds in a second
 const NANOSECONDS: u64 = 1_000_000_000;
 
-
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Clone, Debug))]
+#[serde(crate = "near_sdk::serde")]
+pub struct DepositInfo {
+    pub account_id: AccountId,
+    pub date: Timestamp,
+    pub ft_amount: Balance,
+}
 // Define the contract structure
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -34,21 +41,15 @@ pub struct Contract {
     thirdparty_id:AccountId, //meta yield account
     highest_deposit: Balance, //Highest amount somebody had deposit in the contract
     highest_whitdraw: Balance, //Highest withdraw somebode had done when winning.
-    //deposit_history: Vec<AccountId, Balance>
+    deposit_history: UnorderedSet<DepositInfo>,
 }
 
-// Have to repeat the same trait for our own implementation.
-trait ValueReturnTrait {
-    fn ft_toss_coin(&self,bet: U128, coin_side_choosen:bool) -> PromiseOrValue<U128>;
-}
 
 /// This is format of output via JSON for the auction message.
 #[derive( Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MsgInput {
-     
     pub action_to_execute: String,
-   
 }
 
 // Implement the contract structure
@@ -74,7 +75,8 @@ impl Contract {
             thirdparty_id,
             owner_id,
             highest_deposit:0,
-            highest_whitdraw:0
+            highest_whitdraw:0,
+            deposit_history:UnorderedSet::new(b"d".to_vec()),
         };
         this
     }
@@ -97,8 +99,8 @@ impl Contract {
         self.countdown_period
     }     
     //Get the balance of ft tokens deposited in the vault
-    pub fn get_vault_balance(&self)->Balance {
-        return self.ft_token_balance;
+    pub fn get_vault_balance(&self)->String {
+        return self.ft_token_balance.to_string();
     }
 
     pub fn get_ft_token_id(&self)->AccountId{
@@ -112,6 +114,13 @@ impl Contract {
         return self.treasury_id.clone();
     }
 
+    /// Get daos in paginated view.
+    pub fn get_list_deposits(&self, from_index: u64, limit: u64) -> Vec<DepositInfo> {
+        let elements = self.deposit_history.as_vector();
+        (from_index..std::cmp::min(from_index + limit, elements.len()))
+            .filter_map(|index| elements.get(index))
+            .collect()
+    }
 
     //method to transfer the ft tokens to the winner
     //ideally any one can pull the crank to send the tokens to the winner
@@ -120,6 +129,11 @@ impl Contract {
         assert!(self.time_last_deposit+self.countdown_period<env::block_timestamp(),"The vault hasn't timed out.");
 
         let amount_to_winner = self.ft_token_balance * 49 /100;
+        //transfer FT tokens to winner
+        ft_contract::ext(self.ft_token_id.clone())
+            .with_attached_deposit(1)
+            .with_static_gas(Gas(5*TGAS))
+            .ft_transfer(self.accountid_last_deposit.clone(), U128::from(amount_to_winner), None);
         log!("Deposit to vault: {}",amount_to_winner); 
         
         let amount_to_thirdparty = self.ft_token_balance * 51/100;
@@ -127,7 +141,7 @@ impl Contract {
         ft_contract::ext(self.ft_token_id.clone())
             .with_attached_deposit(1)
             .with_static_gas(Gas(5*TGAS))
-            .ft_transfer(self.accountid_last_deposit.clone(), U128::from(self.ft_token_balance.clone()), None);
+            .ft_transfer(self.accountid_last_deposit.clone(), U128::from(amount_to_thirdparty), None);
         
         //Verifity if it is the highest withdraw
 
@@ -230,6 +244,13 @@ impl Contract {
 
                 log!("Account last deposit: {}",self.accountid_last_deposit); 
                 //Log to show the history of people depositing and implement The Graph
+
+                // Save history
+                self.deposit_history.insert(&DepositInfo{
+                    account_id:self.accountid_last_deposit.clone(),
+                    date:self.time_last_deposit,
+                    ft_amount:amount.0
+                });
 
                 PromiseOrValue::Value(U128::from(0))
             }
