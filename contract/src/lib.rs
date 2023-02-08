@@ -150,6 +150,16 @@ impl Contract {
         }
         //update ft balance to zero (0)
         self.ft_token_balance = 0;
+
+        log!("New vault balance: {}",self.ft_token_balance); 
+        self.countdown_period = 26297430000000000; //Put 30 months of new countdown period
+        //Save current time
+        self.time_last_deposit = env::block_timestamp();
+
+        log!("New endtime: {}",self.get_end_date()); 
+
+
+        //Update flag for knowing if it has been wihtdrawed
     }
     //validate if the owner is the caller
     #[private]
