@@ -26,6 +26,7 @@ pub struct DepositInfo {
     pub account_id: AccountId,
     pub date: Timestamp,
     pub ft_amount: String,
+    pub deposit_or_withdraw: bool, //true=deposit - withdraw=false
 }
 // Define the contract structure
 #[near_bindgen]
@@ -102,19 +103,34 @@ impl Contract {
     pub fn get_vault_balance(&self)->String {
         return self.ft_token_balance.to_string();
     }
-
+    // Get FT contract that is accepted in the vault
     pub fn get_ft_token_id(&self)->AccountId{
         return self.ft_token_id.clone();
     }
+
+    //Get the major amount that has been deposited in one single transaction
+    //to the vault
     pub fn get_highest_deposit(&self)->Balance {
         return self.highest_deposit;
     }
 
+    //Get highest withdraw done
+    pub fn get_highest_withdraw(&self)->Balance {
+        return self.get_highest_withdraw();
+    }
+    //Get the account that is getting the fee 
+    //every new deposit is made
     pub fn get_treasury_id(&self)->AccountId{
         return self.treasury_id.clone();
     }
 
-    /// Get daos in paginated view.
+    //Get # of deposits that has been made
+    pub fn get_number_deposits(&self)->u64{
+        return self.deposit_history.len()
+
+    }
+
+    /// Get deposits in paginated view.
     pub fn get_list_deposits(&self, from_index: u64, limit: u64) -> Vec<DepositInfo> {
         let elements = self.deposit_history.as_vector();
         (from_index..std::cmp::min(from_index + limit, elements.len()))
@@ -127,7 +143,7 @@ impl Contract {
     pub fn withdraw_winner(&mut self){
 
         assert!(self.time_last_deposit+self.countdown_period<env::block_timestamp(),"The vault hasn't timed out.");
-
+        let amount_being_withdrawn = self.ft_token_balance;
         let amount_to_winner = self.ft_token_balance * 49 /100;
         //transfer FT tokens to winner
         ft_contract::ext(self.ft_token_id.clone())
@@ -158,8 +174,12 @@ impl Contract {
 
         log!("New endtime: {}",self.get_end_date()); 
 
-
-        //Update flag for knowing if it has been wihtdrawed
+        self.deposit_history.insert(&DepositInfo{
+            account_id:self.accountid_last_deposit.clone(),
+            date:self.time_last_deposit,
+            ft_amount:amount_being_withdrawn.to_string(),
+            deposit_or_withdraw:false
+        });
     }
     //validate if the owner is the caller
     #[private]
@@ -259,7 +279,8 @@ impl Contract {
                 self.deposit_history.insert(&DepositInfo{
                     account_id:self.accountid_last_deposit.clone(),
                     date:self.time_last_deposit,
-                    ft_amount:amount.0.to_string()
+                    ft_amount:amount.0.to_string(),
+                    deposit_or_withdraw:true
                 });
 
                 PromiseOrValue::Value(U128::from(0))
