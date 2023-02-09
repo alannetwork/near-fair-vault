@@ -150,7 +150,7 @@ impl Contract {
             .with_attached_deposit(1)
             .with_static_gas(Gas(5*TGAS))
             .ft_transfer(self.accountid_last_deposit.clone(), U128::from(amount_to_winner), None);
-        log!("Deposit to vault: {}",amount_to_winner); 
+        log!("Deposit to winner: {}",amount_to_winner); 
         
         let amount_to_thirdparty = self.ft_token_balance * 51/100;
         //transfer FT tokens to thirdparty
