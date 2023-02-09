@@ -41,7 +41,7 @@ pub struct Contract {
     owner_id: AccountId,
     thirdparty_id:AccountId, //meta yield account
     highest_deposit: Balance, //Highest amount somebody had deposit in the contract
-    highest_whitdraw: Balance, //Highest withdraw somebode had done when winning.
+    highest_withdraw: Balance, //Highest withdraw somebode had done when winning.
     deposit_history: UnorderedSet<DepositInfo>,
 }
 
@@ -76,7 +76,7 @@ impl Contract {
             thirdparty_id,
             owner_id,
             highest_deposit:0,
-            highest_whitdraw:0,
+            highest_withdraw:0,
             deposit_history:UnorderedSet::new(b"d".to_vec()),
         };
         this
@@ -116,7 +116,7 @@ impl Contract {
 
     //Get highest withdraw done
     pub fn get_highest_withdraw(&self)->Balance {
-        return self.get_highest_withdraw();
+        return self.highest_withdraw;
     }
     //Get the account that is getting the fee 
     //every new deposit is made
@@ -153,16 +153,17 @@ impl Contract {
         log!("Deposit to vault: {}",amount_to_winner); 
         
         let amount_to_thirdparty = self.ft_token_balance * 51/100;
-        //transfer FT tokens to winner
+        //transfer FT tokens to thirdparty
+        //DAO indeed
         ft_contract::ext(self.ft_token_id.clone())
             .with_attached_deposit(1)
             .with_static_gas(Gas(5*TGAS))
-            .ft_transfer(self.accountid_last_deposit.clone(), U128::from(amount_to_thirdparty), None);
+            .ft_transfer(self.thirdparty_id.clone(), U128::from(amount_to_thirdparty), None);
         
         //Verifity if it is the highest withdraw
 
-        if self.highest_whitdraw < self.ft_token_balance {
-            self.highest_whitdraw = self.ft_token_balance
+        if self.highest_withdraw < self.ft_token_balance {
+            self.highest_withdraw = self.ft_token_balance
         }
         //update ft balance to zero (0)
         self.ft_token_balance = 0;
@@ -232,7 +233,7 @@ impl Contract {
                     }else if amount.0 <1000000000000000000000000000 { // less than 1000 stNEAR - 1 hour
                         self.countdown_period = 3600000000000;
                     }else{ // 1000 stNEAR or more - 15 mins
-                        self.countdown_period = 900000000000;
+                        self.countdown_period = 90000000000; // 90000000000 is 1.5 mins, so you don't wait much
                     }
                 log!("The new countdown period is: {}",self.countdown_period); 
                     
