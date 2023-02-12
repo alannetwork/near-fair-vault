@@ -232,7 +232,7 @@ impl Contract {
                         self.countdown_period = 86400000000000;
                     }else if amount.0 <1000000000000000000000000000 { // less than 1000 stNEAR - 1 hour
                         self.countdown_period = 3600000000000;
-                    }else{ // 1000 stNEAR or more - 15 mins
+                    }else{ // 1000 stNEAR or more - 15 mins - 900000000000
                         self.countdown_period = 90000000000; // 90000000000 is 1.5 mins, so you don't wait much
                     }
                 log!("The new countdown period is: {}",self.countdown_period); 
