@@ -94,8 +94,9 @@ impl Contract {
     //method to transfer the ft tokens to the winner
     //ideally any one can pull the crank to send the tokens to the winner
     pub fn withdraw_winner(&mut self){
-
-        assert!(self.time_last_deposit+self.countdown_period<env::block_timestamp(),"The vault hasn't timed out.");
+        if(self.max_target_amount>self.ft_token_balance){
+            assert!(self.time_last_deposit+self.countdown_period<env::block_timestamp(),"The vault hasn't timed out.");   
+        }
         let amount_being_withdrawn = self.ft_token_balance;
         let amount_to_winner = self.ft_token_balance * 49 /100;
         //transfer FT tokens to winner
@@ -161,7 +162,7 @@ impl Contract {
 
                 assert!(self.time_last_deposit+self.countdown_period>env::block_timestamp(),"The vault has timed out. Claim prize");
                 //Verify that max amount target hasn't been reached
-                assert!(self.max_target_amount<amount.0,"The vault reached its max amount. Thirparty DAO is able to claim the whole vault.");
+                assert!(self.max_target_amount<self.ft_token_balance,"The vault reached its max amount. Thirparty DAO is able to claim the whole vault.");
 
 
 
