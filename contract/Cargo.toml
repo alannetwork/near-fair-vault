@@ -1,5 +1,5 @@
 [package]
-name = "NEAR-diamond-vault"
+name = "near_diamond_vault"
 version = "1.0.0"
 authors = ["Alan777 <alanestrada@cloudmex.io>"]
 edition = "2021"

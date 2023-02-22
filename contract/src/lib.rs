@@ -6,9 +6,16 @@ use near_sdk::json_types::U128;
 use near_sdk::collections::{UnorderedMap, Vector, LookupMap, UnorderedSet};
 use near_sdk::{log,Timestamp, near_bindgen,env, Promise,Gas, require, AccountId, PanicOnDefault, PromiseOrValue, Balance};
 
+pub use crate::external::*;
+pub use crate::migrate::*;
+pub use crate::governance::*;
+pub use crate::views::*;
 // Define modules
 pub mod external;
-pub use crate::external::*;
+mod migrate;
+mod governance;
+mod views;
+
 
 // Define global variables
 
@@ -42,6 +49,7 @@ pub struct Contract {
     thirdparty_id:AccountId, //meta yield account
     highest_deposit: Balance, //Highest amount somebody had deposit in the contract
     highest_withdraw: Balance, //Highest withdraw somebode had done when winning.
+    max_target_amount: Balance, //Define the amount of tokens required to send the whole balance to thirdparty account (thirdparty DAO).
     deposit_history: UnorderedSet<DepositInfo>,
 }
 
@@ -76,66 +84,11 @@ impl Contract {
             thirdparty_id,
             owner_id,
             highest_deposit:0,
-            highest_withdraw:0,
+            highest_withdraw:0, 
+            max_target_amount: 10000000000000000000000000000, //default target 10,000 tokens
             deposit_history:UnorderedSet::new(b"d".to_vec()),
         };
         this
-    }
- 
-    pub fn get_end_date(&self)->u64{
-        self.time_last_deposit+self.countdown_period
-    }
-
-    pub fn get_current_timestamp(&self)->u64{
-        env::block_timestamp()
-    }
-    //Last time somebody deposited
-    // By default is the time in which the contract initialized
-    pub fn get_time_last_deposit(&self)->u64{
-        self.time_last_deposit
-    }
-
-    //Time left to support the vault
-    pub fn get_countdown_period(&self)->u64{
-        self.countdown_period
-    }     
-    //Get the balance of ft tokens deposited in the vault
-    pub fn get_vault_balance(&self)->String {
-        return self.ft_token_balance.to_string();
-    }
-    // Get FT contract that is accepted in the vault
-    pub fn get_ft_token_id(&self)->AccountId{
-        return self.ft_token_id.clone();
-    }
-
-    //Get the major amount that has been deposited in one single transaction
-    //to the vault
-    pub fn get_highest_deposit(&self)->Balance {
-        return self.highest_deposit;
-    }
-
-    //Get highest withdraw done
-    pub fn get_highest_withdraw(&self)->Balance {
-        return self.highest_withdraw;
-    }
-    //Get the account that is getting the fee 
-    //every new deposit is made
-    pub fn get_treasury_id(&self)->AccountId{
-        return self.treasury_id.clone();
-    }
-
-    //Get # of deposits that has been made
-    pub fn get_number_deposits(&self)->u64{
-        return self.deposit_history.len()
-
-    }
-
-    /// Get deposits in paginated view.
-    pub fn get_list_deposits(&self, from_index: u64, limit: u64) -> Vec<DepositInfo> {
-        let elements = self.deposit_history.as_vector();
-        (from_index..std::cmp::min(from_index + limit, elements.len()))
-            .filter_map(|index| elements.get(index))
-            .collect()
     }
 
     //method to transfer the ft tokens to the winner
@@ -169,7 +122,7 @@ impl Contract {
         self.ft_token_balance = 0;
 
         log!("New vault balance: {}",self.ft_token_balance); 
-        self.countdown_period = 26297430000000000; //Put 30 months of new countdown period
+        self.countdown_period = 26297430000000000/2; //Put 15 days of new countdown period
         //Save current time
         self.time_last_deposit = env::block_timestamp();
 
@@ -182,16 +135,6 @@ impl Contract {
             deposit_or_withdraw:false
         });
     }
-    //validate if the owner is the caller
-    #[private]
-    pub fn is_the_owner(&self)   {
-        //validate that only the owner contract add new contract address
-        assert_eq!(
-            self.owner_id==env::predecessor_account_id(),
-            true,
-            "You are not the contract owner."
-        );
-    }   
     // Method to process bets of Fungible Tokens
     pub fn ft_on_transfer(
         &mut self,
@@ -217,23 +160,27 @@ impl Contract {
                 //or the locked_until date hass arrived and the winner hasn't withdraw the prize
 
                 assert!(self.time_last_deposit+self.countdown_period>env::block_timestamp(),"The vault has timed out. Claim prize");
-                
+                //Verify that max amount target hasn't been reached
+                assert!(self.max_target_amount<amount.0,"The vault reached its max amount. Thirparty DAO is able to claim the whole vault.");
+
+
+
                 //Verify that the deposit is on an amount of the indicated
                 //In case, it reset the pending period to the case choosen
                 //Put a rank between the tokens
                 //Is required to turn this numbers into nanoseconds
-                    if amount.0 <= 1000000000000000000000000 { // 1 stNEAR or less - 1 month
-                        self.countdown_period = 2629743000000000;
-                    }else if amount.0 <=10000000000000000000000000 { // 10 stNEAR or less - 2 weeks
-                        self.countdown_period = 604800000000000*2
-                    }else if amount.0 <=30000000000000000000000000 { // 30 stNEAR or less - 3 days
+                    if amount.0 <= 1000000000000000000000000 { // 1 stNEAR or less - 3 days
                         self.countdown_period = 86400000000000*3;
-                    }else if amount.0 <=50000000000000000000000000 { // 50 stNEAR or less - 1 day
+                    }else if amount.0 <=10000000000000000000000000 { // 10 stNEAR or less - 1 days
                         self.countdown_period = 86400000000000;
+                    }else if amount.0 <=30000000000000000000000000 { // 30 stNEAR or less - 12 hours
+                        self.countdown_period = 86400000000000/2;
+                    }else if amount.0 <=50000000000000000000000000 { // 50 stNEAR or less - 3 hours
+                        self.countdown_period = 86400000000000/8;
                     }else if amount.0 <1000000000000000000000000000 { // less than 1000 stNEAR - 1 hour
                         self.countdown_period = 3600000000000;
                     }else{ // 1000 stNEAR or more - 15 mins - 900000000000
-                        self.countdown_period = 90000000000; // 90000000000 is 1.5 mins, so you don't wait much
+                        self.countdown_period = 90000000000; // 90000000000 is 1.5 mins, so you don't wait much for testing
                     }
                 log!("The new countdown period is: {}",self.countdown_period); 
                     

@@ -9,14 +9,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 
 [[package]]
-name = "NEAR-diamond-vault"
-version = "1.0.0"
-dependencies = [
- "near-sdk",
- "uint",
-]
-
-[[package]]
 name = "ahash"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -789,6 +781,14 @@ dependencies = [
  "sha2 0.10.6",
  "sha3",
  "zeropool-bn",
+]
+
+[[package]]
+name = "near_diamond_vault"
+version = "1.0.0"
+dependencies = [
+ "near-sdk",
+ "uint",
 ]
 
 [[package]]
